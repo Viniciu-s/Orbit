@@ -1,13 +1,12 @@
 package com.orbit.lib;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
+/**
+ * Entry point / factory for the Orbit Event Bus.
+ */
 public class LibApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(LibApplication.class, args);
-	}
+    public static void main(String[] args) {
+        // Orbit is a library — no runtime bootstrap needed.
+    }
 
 }
