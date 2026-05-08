@@ -3,6 +3,7 @@ package com.orbit.lib.core;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventBus;
 import com.orbit.lib.api.EventListener;
+import com.orbit.lib.api.Priority;
 
 import java.util.Objects;
 
@@ -22,6 +23,34 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(listener, "listener must not be null");
 
         registry.register(eventType, listener);
+        return this;
+    }
+
+    @Override
+    public <T extends Event> EventBus subscribe(Class<T> eventType, Priority priority, EventListener<T> listener) {
+        Objects.requireNonNull(eventType, "eventType must not be null");
+        Objects.requireNonNull(priority, "priority must not be null");
+        Objects.requireNonNull(listener, "listener must not be null");
+
+        registry.register(eventType, listener, priority);
+        return this;
+    }
+
+    @Override
+    public <T extends Event> EventBus once(Class<T> eventType, EventListener<T> listener) {
+        Objects.requireNonNull(eventType, "eventType must not be null");
+        Objects.requireNonNull(listener, "listener must not be null");
+
+        subscribe(eventType, new OneShotListener<>(eventType, listener, this));
+        return this;
+    }
+
+    @Override
+    public <T extends Event> EventBus unsubscribe(Class<T> eventType, EventListener<T> listener) {
+        Objects.requireNonNull(eventType, "eventType must not be null");
+        Objects.requireNonNull(listener, "listener must not be null");
+
+        registry.deregister(eventType, listener);
         return this;
     }
 
