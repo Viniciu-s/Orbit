@@ -64,5 +64,11 @@
         <!-- Miscellaneous -->
         <module name="UpperEll"/>
         <module name="ArrayTypeStyle"/>
+
+        <!-- Allow should_xxx_when_yyy naming in test classes -->
+        <module name="SuppressionXpathSingleFilter">
+            <property name="files" value=".*Test\.java"/>
+            <property name="checks" value="MethodName"/>
+        </module>
     </module>
 </module>
