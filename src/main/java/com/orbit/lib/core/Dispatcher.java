@@ -1,5 +1,6 @@
 package com.orbit.lib.core;
 
+import com.orbit.lib.api.ErrorHandler;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventListener;
 import org.slf4j.Logger;
@@ -21,6 +22,13 @@ final class Dispatcher {
 
     private static final Logger LOG = LoggerFactory.getLogger(Dispatcher.class);
 
+    private volatile ErrorHandler errorHandler =
+            e -> LOG.error("A listener failed while handling an event", e);
+
+    void setErrorHandler(ErrorHandler handler) {
+        this.errorHandler = handler;
+    }
+
     /**
      * Dispatches {@code event} to every listener in {@code listeners}.
      *
@@ -34,13 +42,11 @@ final class Dispatcher {
             try {
                 ((EventListener<T>) listener).onEvent(event);
             } catch (Exception e) {
-                LOG.error(
-                        "Listener [{}] failed while handling event [{}]: {}",
-                        listener.getClass().getName(),
-                        event.getClass().getSimpleName(),
-                        e.getMessage(),
-                        e
-                );
+                try {
+                    errorHandler.onError(e);
+                } catch (Exception handlerEx) {
+                    LOG.error("ErrorHandler threw while handling a listener failure", handlerEx);
+                }
             }
         }
     }
