@@ -114,6 +114,70 @@ public interface EventBus extends Closeable {
     <T extends Event> EventBus subscribeAsync(Class<T> eventType, Priority priority, EventListener<T> listener);
 
     /**
+     * Registers a wildcard listener that is invoked for every published event,
+     * regardless of its type.
+     *
+     * <p>The listener receives the base {@link Event} interface and can inspect
+     * the concrete type using {@code instanceof}. Wildcard listeners are merged
+     * with type-specific listeners and invoked in priority order (default: NORMAL).
+     *
+     * @param listener the handler to invoke for all events; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    EventBus subscribeAll(EventListener<Event> listener);
+
+    /**
+     * Registers a wildcard listener with an explicit priority.
+     *
+     * <p>Wildcard listeners are merged with type-specific listeners and invoked
+     * in priority order. Listeners with the same priority are invoked in
+     * registration order (FIFO).
+     *
+     * @param priority the execution priority; must not be {@code null}
+     * @param listener the handler to invoke for all events; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    EventBus subscribeAll(Priority priority, EventListener<Event> listener);
+
+    /**
+     * Registers a wildcard listener that always executes off the calling thread.
+     *
+     * <p>The listener is submitted to the bus's internal
+     * {@link java.util.concurrent.ExecutorService} on each invocation.
+     *
+     * @param listener the handler to invoke asynchronously for all events; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    EventBus subscribeAllAsync(EventListener<Event> listener);
+
+    /**
+     * Registers a wildcard listener that always executes off the calling thread,
+     * with an explicit priority.
+     *
+     * @param priority the execution priority; must not be {@code null}
+     * @param listener the handler to invoke asynchronously for all events; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    EventBus subscribeAllAsync(Priority priority, EventListener<Event> listener);
+
+    /**
+     * Removes a previously registered wildcard listener.
+     *
+     * <p>If the listener was registered multiple times, only one registration
+     * is removed per call. If the listener is not registered, this method
+     * does nothing (idempotent).
+     *
+     * @param listener the wildcard handler to remove; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    EventBus unsubscribeAll(EventListener<Event> listener);
+
+    /**
      * Registers a one-shot listener that is automatically removed after its
      * first invocation.
      *
@@ -194,6 +258,51 @@ public interface EventBus extends Closeable {
      * @throws NullPointerException if {@code handler} is {@code null}
      */
     EventBus setErrorHandler(ErrorHandler handler);
+
+    /**
+     * Registers an interceptor that will be invoked before and after each event is published.
+     *
+     * <p>Interceptors are invoked in the order they were added. If an interceptor's
+     * {@link EventInterceptor#beforePublish} throws an exception, the publish is aborted.
+     * If {@link EventInterceptor#afterPublish} throws, the exception is isolated and logged.
+     *
+     * @param interceptor the interceptor to add; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if {@code interceptor} is {@code null}
+     */
+    EventBus addInterceptor(EventInterceptor interceptor);
+
+    /**
+     * Removes a previously registered interceptor.
+     *
+     * <p>If the interceptor is not currently registered, this method does nothing
+     * (idempotent). Matching is done by identity ({@code ==}).
+     *
+     * @param interceptor the interceptor to remove; must not be {@code null}
+     * @return this {@code EventBus} instance for fluent chaining
+     * @throws NullPointerException if {@code interceptor} is {@code null}
+     */
+    EventBus removeInterceptor(EventInterceptor interceptor);
+
+    /**
+     * Creates an isolated event channel with the given name.
+     *
+     * <p>Each channel maintains its own set of listeners, interceptors, and error handler.
+     * Events published to one channel are only delivered to listeners registered on that
+     * same channel. The default (unnamed) bus and all named channels are completely isolated.
+     *
+     * <p>Calling {@code channel("payments")} multiple times returns separate {@code EventBus}
+     * instances that share the same underlying channel state. Listeners registered via one
+     * instance are visible to the other.
+     *
+     * <p>Channels share the same {@link java.util.concurrent.ExecutorService} as the parent
+     * bus. When the parent bus is closed via {@link #close()}, all channels are closed as well.
+     *
+     * @param name the channel name; must not be {@code null}
+     * @return an {@code EventBus} scoped to the named channel
+     * @throws NullPointerException if {@code name} is {@code null}
+     */
+    EventBus channel(String name);
 
     /**
      * Shuts down the internal {@link java.util.concurrent.ExecutorService}.
