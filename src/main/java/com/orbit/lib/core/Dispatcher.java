@@ -1,5 +1,6 @@
 package com.orbit.lib.core;
 
+import com.orbit.lib.api.CancellableEvent;
 import com.orbit.lib.api.ErrorHandler;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventListener;
@@ -30,6 +31,21 @@ final class Dispatcher {
     }
 
     /**
+     * Reports an error through the configured {@link ErrorHandler}.
+     *
+     * <p>Used internally by {@code OrbitEventBus} to report interceptor failures.
+     *
+     * @param error the error to report; must not be {@code null}
+     */
+    void reportError(Throwable error) {
+        try {
+            errorHandler.onError(error);
+        } catch (Exception handlerEx) {
+            LOG.error("ErrorHandler threw while handling an error", handlerEx);
+        }
+    }
+
+    /**
      * Dispatches {@code event} to every listener in {@code listeners}.
      *
      * @param <T>       the event type
@@ -39,6 +55,9 @@ final class Dispatcher {
     @SuppressWarnings("unchecked")
     <T extends Event> void dispatch(T event, List<EventListener<?>> listeners) {
         for (EventListener<?> listener : listeners) {
+            if (event instanceof CancellableEvent ce && ce.isCancelled()) {
+                break;
+            }
             try {
                 ((EventListener<T>) listener).onEvent(event);
             } catch (Exception e) {

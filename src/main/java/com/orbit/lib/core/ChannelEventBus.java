@@ -8,69 +8,57 @@ import com.orbit.lib.api.EventListener;
 import com.orbit.lib.api.Priority;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
- * Thread-safe implementation of {@link EventBus}.
+ * Implementation of {@link EventBus} for a named channel.
  *
- * <p>Delegates listener storage and retrieval to {@link ListenerRegistry}.
+ * <p>Each channel is isolated: listeners and events are scoped to the channel.
+ * Channels share the {@link ExecutorService} with the parent bus but maintain
+ * their own {@link ListenerRegistry}, interceptors, and error handler via
+ * a shared {@link ChannelState}.
+ *
+ * <p>Package-private — created via {@link OrbitEventBus#channel(String)}.
  */
-public final class OrbitEventBus implements EventBus {
+final class ChannelEventBus implements EventBus {
 
-    private final ListenerRegistry registry = new ListenerRegistry();
-    private final Dispatcher dispatcher = new Dispatcher();
+    private final ChannelState state;
     private final ExecutorService executor;
-    private final Map<Object, List<Runnable>> handlerDeregistrations =
-            Collections.synchronizedMap(new IdentityHashMap<>());
-    private final CopyOnWriteArrayList<EventInterceptor> interceptors =
-            new CopyOnWriteArrayList<>();
-    private final ConcurrentHashMap<String, ChannelState> channels =
-            new ConcurrentHashMap<>();
-
-    /** Creates a bus backed by a cached thread pool. */
-    public OrbitEventBus() {
-        this(Executors.newCachedThreadPool());
-    }
 
     /**
-     * Creates a bus backed by the supplied executor.
+     * Creates a channel-scoped event bus.
      *
-     * <p>Useful for testing: pass a direct / single-thread executor
-     * to make async dispatch deterministic.
-     *
-     * @param executor the executor to use for async dispatch; must not be {@code null}
+     * @param name     the channel name; must not be {@code null}
+     * @param state    the shared channel state; must not be {@code null}
+     * @param executor the shared executor; must not be {@code null}
      */
-    public OrbitEventBus(ExecutorService executor) {
+    ChannelEventBus(String name, ChannelState state, ExecutorService executor) {
+        Objects.requireNonNull(name, "name must not be null");
+        this.state = Objects.requireNonNull(state, "state must not be null");
         this.executor = Objects.requireNonNull(executor, "executor must not be null");
     }
 
     @Override
     public EventBus setErrorHandler(ErrorHandler handler) {
         Objects.requireNonNull(handler, "handler must not be null");
-        dispatcher.setErrorHandler(handler);
+        state.dispatcher.setErrorHandler(handler);
         return this;
     }
 
     @Override
     public EventBus addInterceptor(EventInterceptor interceptor) {
         Objects.requireNonNull(interceptor, "interceptor must not be null");
-        interceptors.add(interceptor);
+        state.interceptors.add(interceptor);
         return this;
     }
 
     @Override
     public EventBus removeInterceptor(EventInterceptor interceptor) {
         Objects.requireNonNull(interceptor, "interceptor must not be null");
-        interceptors.remove(interceptor);
+        state.interceptors.remove(interceptor);
         return this;
     }
 
@@ -81,19 +69,19 @@ public final class OrbitEventBus implements EventBus {
         List<Runnable> deregistrations = new ArrayList<>();
         for (ScannedMethod sm : scanned) {
             EventListener<?> ml = new MethodListener<>(handler, sm.method());
-            registry.register(sm.eventType(), ml, sm.priority());
+            state.registry.register(sm.eventType(), ml, sm.priority());
             final Class<?> type = sm.eventType();
             final EventListener<?> finalMl = ml;
-            deregistrations.add(() -> registry.deregister(type, finalMl));
+            deregistrations.add(() -> state.registry.deregister(type, finalMl));
         }
-        handlerDeregistrations.put(handler, deregistrations);
+        state.handlerDeregistrations.put(handler, deregistrations);
         return this;
     }
 
     @Override
     public EventBus unregister(Object handler) {
         Objects.requireNonNull(handler, "handler must not be null");
-        List<Runnable> deregistrations = handlerDeregistrations.remove(handler);
+        List<Runnable> deregistrations = state.handlerDeregistrations.remove(handler);
         if (deregistrations != null) {
             deregistrations.forEach(Runnable::run);
         }
@@ -105,7 +93,7 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(eventType, "eventType must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
 
-        registry.register(eventType, listener);
+        state.registry.register(eventType, listener);
         return this;
     }
 
@@ -115,7 +103,7 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(priority, "priority must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
 
-        registry.register(eventType, listener, priority);
+        state.registry.register(eventType, listener, priority);
         return this;
     }
 
@@ -124,7 +112,7 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(eventType, "eventType must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
 
-        registry.register(eventType, new AsyncListener<>(listener, executor));
+        state.registry.register(eventType, new AsyncListener<>(listener, executor));
         return this;
     }
 
@@ -134,14 +122,14 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(priority, "priority must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
 
-        registry.register(eventType, new AsyncListener<>(listener, executor), priority);
+        state.registry.register(eventType, new AsyncListener<>(listener, executor), priority);
         return this;
     }
 
     @Override
     public EventBus subscribeAll(EventListener<Event> listener) {
         Objects.requireNonNull(listener, "listener must not be null");
-        registry.registerWildcard(listener, Priority.NORMAL);
+        state.registry.registerWildcard(listener, Priority.NORMAL);
         return this;
     }
 
@@ -149,14 +137,14 @@ public final class OrbitEventBus implements EventBus {
     public EventBus subscribeAll(Priority priority, EventListener<Event> listener) {
         Objects.requireNonNull(priority, "priority must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
-        registry.registerWildcard(listener, priority);
+        state.registry.registerWildcard(listener, priority);
         return this;
     }
 
     @Override
     public EventBus subscribeAllAsync(EventListener<Event> listener) {
         Objects.requireNonNull(listener, "listener must not be null");
-        registry.registerWildcard(new AsyncListener<>(listener, executor), Priority.NORMAL);
+        state.registry.registerWildcard(new AsyncListener<>(listener, executor), Priority.NORMAL);
         return this;
     }
 
@@ -164,14 +152,14 @@ public final class OrbitEventBus implements EventBus {
     public EventBus subscribeAllAsync(Priority priority, EventListener<Event> listener) {
         Objects.requireNonNull(priority, "priority must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
-        registry.registerWildcard(new AsyncListener<>(listener, executor), priority);
+        state.registry.registerWildcard(new AsyncListener<>(listener, executor), priority);
         return this;
     }
 
     @Override
     public EventBus unsubscribeAll(EventListener<Event> listener) {
         Objects.requireNonNull(listener, "listener must not be null");
-        registry.deregisterWildcard(listener);
+        state.registry.deregisterWildcard(listener);
         return this;
     }
 
@@ -189,7 +177,7 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(eventType, "eventType must not be null");
         Objects.requireNonNull(listener, "listener must not be null");
 
-        registry.deregister(eventType, listener);
+        state.registry.deregister(eventType, listener);
         return this;
     }
 
@@ -198,19 +186,19 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(event, "event must not be null");
 
         // beforePublish (can throw to abort)
-        for (EventInterceptor interceptor : interceptors) {
+        for (EventInterceptor interceptor : state.interceptors) {
             interceptor.beforePublish(event);
         }
 
         // dispatch to listeners
-        dispatcher.dispatch(event, registry.getListeners(event.getClass()));
+        state.dispatcher.dispatch(event, state.registry.getListeners(event.getClass()));
 
         // afterPublish (isolated)
-        for (EventInterceptor interceptor : interceptors) {
+        for (EventInterceptor interceptor : state.interceptors) {
             try {
                 interceptor.afterPublish(event);
             } catch (Exception e) {
-                dispatcher.reportError(e);
+                state.dispatcher.reportError(e);
             }
         }
 
@@ -220,7 +208,7 @@ public final class OrbitEventBus implements EventBus {
     @Override
     public int listenerCount(Class<? extends Event> eventType) {
         Objects.requireNonNull(eventType, "eventType must not be null");
-        return registry.count(eventType);
+        return state.registry.count(eventType);
     }
 
     @Override
@@ -228,22 +216,22 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(event, "event must not be null");
 
         // beforePublish (synchronous, can throw to abort)
-        for (EventInterceptor interceptor : interceptors) {
+        for (EventInterceptor interceptor : state.interceptors) {
             interceptor.beforePublish(event);
         }
 
-        List<EventListener<?>> listeners = registry.getListeners(event.getClass());
+        List<EventListener<?>> listeners = state.registry.getListeners(event.getClass());
         return CompletableFuture.runAsync(
                 () -> {
                     // dispatch to listeners
-                    dispatcher.dispatch(event, listeners);
+                    state.dispatcher.dispatch(event, listeners);
 
                     // afterPublish (isolated)
-                    for (EventInterceptor interceptor : interceptors) {
+                    for (EventInterceptor interceptor : state.interceptors) {
                         try {
                             interceptor.afterPublish(event);
                         } catch (Exception e) {
-                            dispatcher.reportError(e);
+                            state.dispatcher.reportError(e);
                         }
                     }
                 },
@@ -252,14 +240,13 @@ public final class OrbitEventBus implements EventBus {
     }
 
     @Override
-    public EventBus channel(String name) {
-        Objects.requireNonNull(name, "name must not be null");
-        ChannelState state = channels.computeIfAbsent(name, k -> new ChannelState());
-        return new ChannelEventBus(name, state, executor);
+    public EventBus channel(String channelName) {
+        Objects.requireNonNull(channelName, "name must not be null");
+        return this;
     }
 
     @Override
     public void close() {
-        executor.shutdown();
+        // Channels don't own the executor — parent bus closes it
     }
 }

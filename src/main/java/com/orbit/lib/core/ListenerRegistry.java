@@ -27,6 +27,8 @@ final class ListenerRegistry {
 
     private final ConcurrentHashMap<Class<?>, CopyOnWriteArrayList<PrioritizedListener<?>>> store =
             new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<PrioritizedListener<?>> wildcardListeners =
+            new CopyOnWriteArrayList<>();
 
     /**
      * Registers a listener for the given event type with {@link Priority#NORMAL}.
@@ -53,6 +55,35 @@ final class ListenerRegistry {
         Objects.requireNonNull(priority, "priority must not be null");
         store.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>())
                 .add(new PrioritizedListener<>(priority, listener));
+    }
+
+    /**
+     * Registers a wildcard listener that receives all events.
+     *
+     * @param listener the handler to register; must not be {@code null}
+     * @param priority the execution priority; must not be {@code null}
+     * @throws NullPointerException if any argument is {@code null}
+     */
+    void registerWildcard(EventListener<?> listener, Priority priority) {
+        Objects.requireNonNull(listener, "listener must not be null");
+        Objects.requireNonNull(priority, "priority must not be null");
+        wildcardListeners.add(new PrioritizedListener<>(priority, listener));
+    }
+
+    /**
+     * Removes one registration of the given wildcard listener.
+     *
+     * @param listener the handler to remove; must not be {@code null}
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    void deregisterWildcard(EventListener<?> listener) {
+        Objects.requireNonNull(listener, "listener must not be null");
+        for (PrioritizedListener<?> pl : wildcardListeners) {
+            if (pl.delegate().equals(listener)) {
+                wildcardListeners.remove(pl);
+                return;
+            }
+        }
     }
 
     /**
@@ -84,11 +115,13 @@ final class ListenerRegistry {
     }
 
     /**
-     * Returns a priority-sorted snapshot of all listeners for the given event type.
+     * Returns a priority-sorted snapshot of all listeners for the given event type,
+     * including wildcard listeners.
      *
-     * <p>Listeners are ordered by {@link Priority} (HIGH first, LOW last). Within
-     * the same priority, insertion order (FIFO) is preserved. The returned list
-     * is a point-in-time copy — modifications after this call are not reflected.
+     * <p>Wildcard listeners are merged with type-specific listeners and sorted
+     * by {@link Priority} (HIGH first, LOW last). Within the same priority,
+     * insertion order (FIFO) is preserved. The returned list is a point-in-time
+     * copy — modifications after this call are not reflected.
      *
      * @param eventType the class token; must not be {@code null}
      * @return an unmodifiable, priority-ordered snapshot; never {@code null}
@@ -96,14 +129,24 @@ final class ListenerRegistry {
      */
     List<EventListener<?>> getListeners(Class<?> eventType) {
         Objects.requireNonNull(eventType, "eventType must not be null");
-        CopyOnWriteArrayList<PrioritizedListener<?>> listeners = store.get(eventType);
-        if (listeners == null) {
+        CopyOnWriteArrayList<PrioritizedListener<?>> specificListeners = store.get(eventType);
+
+        // Merge wildcard + specific
+        List<PrioritizedListener<?>> merged = new ArrayList<>(wildcardListeners);
+        if (specificListeners != null) {
+            merged.addAll(specificListeners);
+        }
+
+        if (merged.isEmpty()) {
             return Collections.emptyList();
         }
-        List<PrioritizedListener<?>> sorted = new ArrayList<>(listeners);
-        sorted.sort(Comparator.comparingInt(pl -> pl.priority().ordinal()));
-        List<EventListener<?>> result = new ArrayList<>(sorted.size());
-        for (PrioritizedListener<?> pl : sorted) {
+
+        // Sort by priority
+        merged.sort(Comparator.comparingInt(pl -> pl.priority().ordinal()));
+
+        // Extract delegates
+        List<EventListener<?>> result = new ArrayList<>(merged.size());
+        for (PrioritizedListener<?> pl : merged) {
             result.add(pl);
         }
         return Collections.unmodifiableList(result);
