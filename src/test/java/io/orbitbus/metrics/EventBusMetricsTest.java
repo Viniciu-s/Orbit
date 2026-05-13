@@ -1,8 +1,8 @@
 package io.orbitbus.metrics;
 
+import io.orbitbus.pipeline.EventInterceptor;
 import io.orbitbus.core.Event;
 import io.orbitbus.core.EventBus;
-import io.orbitbus.pipeline.EventInterceptor;
 import io.orbitbus.Orbit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
