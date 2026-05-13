@@ -3,6 +3,8 @@ package com.orbit.lib.core;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventBus;
 import com.orbit.lib.api.EventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -18,6 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 final class OneShotListener<T extends Event> implements EventListener<T> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(OneShotListener.class);
+
     private final AtomicBoolean fired = new AtomicBoolean(false);
     private final Class<T> eventType;
     private final EventListener<T> delegate;
@@ -32,6 +36,7 @@ final class OneShotListener<T extends Event> implements EventListener<T> {
     @Override
     public void onEvent(T event) {
         if (fired.compareAndSet(false, true)) {
+            LOG.debug("OneShotListener for [{}] fired, self-removing", eventType.getSimpleName());
             try {
                 delegate.onEvent(event);
             } finally {

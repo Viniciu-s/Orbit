@@ -305,6 +305,21 @@ public interface EventBus extends Closeable {
     EventBus channel(String name);
 
     /**
+     * Returns runtime metrics for this event bus.
+     *
+     * <p>Metrics include event counts, execution times, and active listener counts.
+     * All metrics operations are thread-safe and can be queried concurrently with
+     * event publishing.
+     *
+     * <p>The returned {@link EventBusMetrics} instance is bound to this bus and
+     * reflects its lifetime. Calling {@link EventBusMetrics#reset()} clears
+     * historical metrics but does not affect active listeners.
+     *
+     * @return metrics for this bus; never {@code null}
+     */
+    EventBusMetrics metrics();
+
+    /**
      * Shuts down the internal {@link java.util.concurrent.ExecutorService}.
      *
      * <p>Already-submitted tasks are allowed to complete. No new async publishes
