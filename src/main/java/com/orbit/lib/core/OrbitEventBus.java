@@ -6,6 +6,8 @@ import com.orbit.lib.api.EventBus;
 import com.orbit.lib.api.EventInterceptor;
 import com.orbit.lib.api.EventListener;
 import com.orbit.lib.api.Priority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +27,8 @@ import java.util.concurrent.Executors;
  * <p>Delegates listener storage and retrieval to {@link ListenerRegistry}.
  */
 public final class OrbitEventBus implements EventBus {
+
+    private static final Logger LOG = LoggerFactory.getLogger(OrbitEventBus.class);
 
     private final ListenerRegistry registry = new ListenerRegistry();
     private final Dispatcher dispatcher = new Dispatcher();
@@ -64,6 +68,7 @@ public final class OrbitEventBus implements EventBus {
     public EventBus addInterceptor(EventInterceptor interceptor) {
         Objects.requireNonNull(interceptor, "interceptor must not be null");
         interceptors.add(interceptor);
+        LOG.debug("Added interceptor [{}], total: {}", interceptor.getClass().getSimpleName(), interceptors.size());
         return this;
     }
 
@@ -71,6 +76,7 @@ public final class OrbitEventBus implements EventBus {
     public EventBus removeInterceptor(EventInterceptor interceptor) {
         Objects.requireNonNull(interceptor, "interceptor must not be null");
         interceptors.remove(interceptor);
+        LOG.debug("Removed interceptor [{}], remaining: {}", interceptor.getClass().getSimpleName(), interceptors.size());
         return this;
     }
 
@@ -78,6 +84,8 @@ public final class OrbitEventBus implements EventBus {
     public EventBus register(Object handler) {
         Objects.requireNonNull(handler, "handler must not be null");
         List<ScannedMethod> scanned = AnnotationScanner.scan(handler);
+        LOG.debug("Registering handler [{}], found {} @Subscribe method(s)",
+                handler.getClass().getSimpleName(), scanned.size());
         List<Runnable> deregistrations = new ArrayList<>();
         for (ScannedMethod sm : scanned) {
             EventListener<?> ml = new MethodListener<>(handler, sm.method());
@@ -96,6 +104,8 @@ public final class OrbitEventBus implements EventBus {
         List<Runnable> deregistrations = handlerDeregistrations.remove(handler);
         if (deregistrations != null) {
             deregistrations.forEach(Runnable::run);
+            LOG.debug("Unregistered handler [{}], removed {} listener(s)",
+                    handler.getClass().getSimpleName(), deregistrations.size());
         }
         return this;
     }
@@ -106,6 +116,8 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(listener, "listener must not be null");
 
         registry.register(eventType, listener);
+        LOG.debug("Subscribed listener for event type [{}], total listeners: {}",
+                eventType.getSimpleName(), registry.count(eventType));
         return this;
     }
 
@@ -125,6 +137,7 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(listener, "listener must not be null");
 
         registry.register(eventType, new AsyncListener<>(listener, executor));
+        LOG.debug("Subscribed async listener for event type [{}]", eventType.getSimpleName());
         return this;
     }
 
@@ -190,6 +203,8 @@ public final class OrbitEventBus implements EventBus {
         Objects.requireNonNull(listener, "listener must not be null");
 
         registry.deregister(eventType, listener);
+        LOG.debug("Unsubscribed listener for event type [{}], remaining: {}",
+                eventType.getSimpleName(), registry.count(eventType));
         return this;
     }
 
@@ -203,7 +218,9 @@ public final class OrbitEventBus implements EventBus {
         }
 
         // dispatch to listeners
-        dispatcher.dispatch(event, registry.getListeners(event.getClass()));
+        List<EventListener<?>> listeners = registry.getListeners(event.getClass());
+        LOG.info("Publishing event [{}] to {} listener(s)", event.getClass().getSimpleName(), listeners.size());
+        dispatcher.dispatch(event, listeners);
 
         // afterPublish (isolated)
         for (EventInterceptor interceptor : interceptors) {
@@ -233,6 +250,8 @@ public final class OrbitEventBus implements EventBus {
         }
 
         List<EventListener<?>> listeners = registry.getListeners(event.getClass());
+        LOG.info("Publishing event [{}] asynchronously to {} listener(s)",
+                event.getClass().getSimpleName(), listeners.size());
         return CompletableFuture.runAsync(
                 () -> {
                     // dispatch to listeners
@@ -254,7 +273,10 @@ public final class OrbitEventBus implements EventBus {
     @Override
     public EventBus channel(String name) {
         Objects.requireNonNull(name, "name must not be null");
-        ChannelState state = channels.computeIfAbsent(name, k -> new ChannelState());
+        ChannelState state = channels.computeIfAbsent(name, k -> {
+            LOG.debug("Creating new channel [{}]", name);
+            return new ChannelState();
+        });
         return new ChannelEventBus(name, state, executor);
     }
 

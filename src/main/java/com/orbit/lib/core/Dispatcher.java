@@ -54,6 +54,7 @@ final class Dispatcher {
      */
     @SuppressWarnings("unchecked")
     <T extends Event> void dispatch(T event, List<EventListener<?>> listeners) {
+        LOG.debug("Dispatching event [{}] to {} listener(s)", event.getClass().getSimpleName(), listeners.size());
         for (EventListener<?> listener : listeners) {
             if (event instanceof CancellableEvent ce && ce.isCancelled()) {
                 break;

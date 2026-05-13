@@ -127,3 +127,11 @@ After Phase 5, output a final report:
 - README behaviors covered: <list>
 - Remaining TODO (if any): <list>
 ```
+
+---
+
+## Commit text for github
+After Phase 5, prepare a commit message in this formats for example:
+```feat: Implement <feature/component name> in Orbit Event Bus
+```fix: <if this was a bug fix, otherwise omit>
+``ùpdate: <if this is an update to an existing feature, otherwise omit>

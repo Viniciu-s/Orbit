@@ -2,6 +2,8 @@ package com.orbit.lib.core;
 
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.Subscribe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -19,6 +21,8 @@ import java.util.List;
  */
 final class AnnotationScanner {
 
+    private static final Logger LOG = LoggerFactory.getLogger(AnnotationScanner.class);
+
     private AnnotationScanner() {
     }
 
@@ -30,6 +34,7 @@ final class AnnotationScanner {
      * @throws IllegalArgumentException if any annotated method has an invalid signature
      */
     static List<ScannedMethod> scan(Object handler) {
+        LOG.debug("Scanning handler class [{}] for @Subscribe methods", handler.getClass().getSimpleName());
         List<ScannedMethod> result = new ArrayList<>();
         for (Method method : handler.getClass().getMethods()) {
             Subscribe annotation = method.getAnnotation(Subscribe.class);
@@ -42,6 +47,7 @@ final class AnnotationScanner {
                     (Class<? extends Event>) method.getParameterTypes()[0];
             result.add(new ScannedMethod(eventType, annotation.priority(), method));
         }
+        LOG.debug("Found {} @Subscribe method(s) in [{}]", result.size(), handler.getClass().getSimpleName());
         return result;
     }
 

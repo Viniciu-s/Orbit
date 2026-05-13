@@ -2,6 +2,8 @@ package com.orbit.lib.core;
 
 import com.orbit.lib.api.EventListener;
 import com.orbit.lib.api.Priority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +26,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * </ul>
  */
 final class ListenerRegistry {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ListenerRegistry.class);
 
     private final ConcurrentHashMap<Class<?>, CopyOnWriteArrayList<PrioritizedListener<?>>> store =
             new ConcurrentHashMap<>();
@@ -55,6 +59,8 @@ final class ListenerRegistry {
         Objects.requireNonNull(priority, "priority must not be null");
         store.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>())
                 .add(new PrioritizedListener<>(priority, listener));
+        LOG.debug("Registered listener for type [{}] with priority [{}]",
+                eventType.getSimpleName(), priority);
     }
 
     /**
@@ -68,6 +74,7 @@ final class ListenerRegistry {
         Objects.requireNonNull(listener, "listener must not be null");
         Objects.requireNonNull(priority, "priority must not be null");
         wildcardListeners.add(new PrioritizedListener<>(priority, listener));
+        LOG.debug("Registered wildcard listener with priority [{}]", priority);
     }
 
     /**
@@ -81,6 +88,7 @@ final class ListenerRegistry {
         for (PrioritizedListener<?> pl : wildcardListeners) {
             if (pl.delegate().equals(listener)) {
                 wildcardListeners.remove(pl);
+                LOG.debug("Deregistered wildcard listener");
                 return;
             }
         }
@@ -109,6 +117,7 @@ final class ListenerRegistry {
         for (PrioritizedListener<?> pl : listeners) {
             if (pl.delegate().equals(listener)) {
                 listeners.remove(pl);
+                LOG.debug("Deregistered listener for type [{}]", eventType.getSimpleName());
                 return;
             }
         }
