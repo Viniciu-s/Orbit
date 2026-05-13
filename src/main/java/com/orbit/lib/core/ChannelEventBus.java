@@ -3,6 +3,7 @@ package com.orbit.lib.core;
 import com.orbit.lib.api.ErrorHandler;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventBus;
+import com.orbit.lib.api.EventBusMetrics;
 import com.orbit.lib.api.EventInterceptor;
 import com.orbit.lib.api.EventListener;
 import com.orbit.lib.api.Priority;
@@ -39,6 +40,8 @@ final class ChannelEventBus implements EventBus {
         Objects.requireNonNull(name, "name must not be null");
         this.state = Objects.requireNonNull(state, "state must not be null");
         this.executor = Objects.requireNonNull(executor, "executor must not be null");
+        // Initialize metrics for this channel
+        state.initializeMetrics(this);
     }
 
     @Override
@@ -243,6 +246,11 @@ final class ChannelEventBus implements EventBus {
     public EventBus channel(String channelName) {
         Objects.requireNonNull(channelName, "name must not be null");
         return this;
+    }
+
+    @Override
+    public EventBusMetrics metrics() {
+        return state.getMetricsCollector();
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.orbit.lib.core;
 import com.orbit.lib.api.ErrorHandler;
 import com.orbit.lib.api.Event;
 import com.orbit.lib.api.EventBus;
+import com.orbit.lib.api.EventBusMetrics;
 import com.orbit.lib.api.EventInterceptor;
 import com.orbit.lib.api.EventListener;
 import com.orbit.lib.api.Priority;
@@ -33,6 +34,7 @@ public final class OrbitEventBus implements EventBus {
     private final ListenerRegistry registry = new ListenerRegistry();
     private final Dispatcher dispatcher = new Dispatcher();
     private final ExecutorService executor;
+    private final MetricsCollectorInterceptor metricsCollector;
     private final Map<Object, List<Runnable>> handlerDeregistrations =
             Collections.synchronizedMap(new IdentityHashMap<>());
     private final CopyOnWriteArrayList<EventInterceptor> interceptors =
@@ -55,6 +57,9 @@ public final class OrbitEventBus implements EventBus {
      */
     public OrbitEventBus(ExecutorService executor) {
         this.executor = Objects.requireNonNull(executor, "executor must not be null");
+        this.metricsCollector = new MetricsCollectorInterceptor(this, registry);
+        // Auto-register metrics collector as the first interceptor
+        interceptors.add(metricsCollector);
     }
 
     @Override
@@ -278,6 +283,11 @@ public final class OrbitEventBus implements EventBus {
             return new ChannelState();
         });
         return new ChannelEventBus(name, state, executor);
+    }
+
+    @Override
+    public EventBusMetrics metrics() {
+        return metricsCollector;
     }
 
     @Override

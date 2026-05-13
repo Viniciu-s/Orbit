@@ -173,4 +173,16 @@ final class ListenerRegistry {
         CopyOnWriteArrayList<PrioritizedListener<?>> listeners = store.get(eventType);
         return listeners == null ? 0 : listeners.size();
     }
+
+    /**
+     * Returns a snapshot of all event types that have at least one listener registered.
+     *
+     * <p>The returned set is a defensive copy — modifications do not affect
+     * the internal state.
+     *
+     * @return all event types with registered listeners; never {@code null}
+     */
+    java.util.Set<Class<?>> getAllEventTypes() {
+        return new java.util.HashSet<>(store.keySet());
+    }
 }

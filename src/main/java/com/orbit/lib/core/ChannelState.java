@@ -1,5 +1,6 @@
 package com.orbit.lib.core;
 
+import com.orbit.lib.api.EventBus;
 import com.orbit.lib.api.EventInterceptor;
 
 import java.util.Collections;
@@ -24,7 +25,29 @@ final class ChannelState {
             Collections.synchronizedMap(new IdentityHashMap<>());
     final CopyOnWriteArrayList<EventInterceptor> interceptors =
             new CopyOnWriteArrayList<>();
+    private MetricsCollectorInterceptor metricsCollector;
 
     ChannelState() {
+    }
+
+    /**
+     * Initializes metrics for this channel, if not already initialized.
+     *
+     * @param bus the EventBus to attach metrics to
+     */
+    void initializeMetrics(EventBus bus) {
+        if (metricsCollector == null) {
+            metricsCollector = new MetricsCollectorInterceptor(bus, registry);
+            interceptors.add(metricsCollector);
+        }
+    }
+
+    /**
+     * Returns the metrics collector for this channel.
+     *
+     * @return the metrics collector, or {@code null} if not initialized
+     */
+    MetricsCollectorInterceptor getMetricsCollector() {
+        return metricsCollector;
     }
 }
