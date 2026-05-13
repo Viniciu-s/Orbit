@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Suppress EI_EXPOSE_REP and EI_EXPOSE_REP2 for reflection-based components -->
+    <!-- ScannedMethod: Method objects are immutable after construction, exposure is acceptable -->
+    <Match>
+        <Class name="io.orbitbus.annotation.ScannedMethod"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- MethodListener: Method objects are immutable after construction, exposure is acceptable -->
+    <Match>
+        <Class name="io.orbitbus.listener.MethodListener"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- MethodListener.setAccessible: This is a library, not an applet/application with security manager -->
+    <!-- Modern Java applications typically don't use security managers, so doPrivileged is not required -->
+    <Match>
+        <Class name="io.orbitbus.listener.MethodListener"/>
+        <Bug pattern="DP_DO_INSIDE_DO_PRIVILEGED"/>
+    </Match>
+</FindBugsFilter>
