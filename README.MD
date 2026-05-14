@@ -5,10 +5,10 @@
 ### **Event-Driven Architecture para Java Moderno**
 
 [![Java Version](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)]()
-[![Tests](https://img.shields.io/badge/tests-238%20passing-brightgreen.svg)]()
+[![Maven Central](https://img.shields.io/badge/Maven%20Central-1.0.0-blue.svg)](https://search.maven.org/artifact/io.github.viniciu-s/orbit)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/Viniciu-s/Orbit/actions/workflows/ci.yml/badge.svg)](https://github.com/Viniciu-s/Orbit/actions/workflows/ci.yml)
+[![Release](https://github.com/Viniciu-s/Orbit/actions/workflows/release.yml/badge.svg)](https://github.com/Viniciu-s/Orbit/actions/workflows/release.yml)
 
 **Orbit** é uma biblioteca Java zero-dependency para comunicação orientada a eventos, projetada para desacoplar componentes e simplificar arquiteturas modernas.
 
@@ -73,7 +73,7 @@ bus.subscribe(UserCreatedEvent.class, event -> {
 #### Maven
 ```xml
 <dependency>
-    <groupId>io.orbitbus</groupId>
+    <groupId>io.github.viniciu-s</groupId>
     <artifactId>orbit</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -81,8 +81,12 @@ bus.subscribe(UserCreatedEvent.class, event -> {
 
 #### Gradle
 ```gradle
-implementation 'io.orbitbus:orbit:1.0.0'
+implementation 'io.github.viniciu-s:orbit:1.0.0'
 ```
+
+> 📦 **Disponível no Maven Central**: [io.github.viniciu-s:orbit](https://search.maven.org/artifact/io.github.viniciu-s/orbit)
+
+> ⚡ **Zero Dependencies**: Apenas SLF4J API (implementação escolhida pelo consumidor)
 
 ### 2️⃣ Seu Primeiro Evento
 

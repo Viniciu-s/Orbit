@@ -1,0 +1,97 @@
+name: Release - Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.1.0, etc.
+
+jobs:
+  release:
+    name: Release to Maven Central
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for changelog
+      
+      - name: ☕ Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      
+      - name: 🏷️ Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+      
+      - name: 🔍 Verify Maven configuration
+        run: ./mvnw --version
+      
+      - name: 🧪 Run full test suite
+        run: ./mvnw clean verify
+      
+      - name: 📦 Build and sign artifacts
+        run: ./mvnw clean verify -P release
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      
+      - name: 🚀 Deploy to Maven Central
+        run: ./mvnw deploy -P release -DskipTests
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      
+      - name: 📝 Generate release notes
+        id: release_notes
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          
+          # Extract changelog for this version
+          CHANGELOG=$(awk "/^## \[$VERSION\]/,/^## \[/" CHANGELOG.md | sed '$d' | tail -n +2)
+          
+          # If changelog is empty, use a default message
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="Release version $VERSION"
+          fi
+          
+          # Save to file (multiline safe)
+          echo "$CHANGELOG" > /tmp/release_notes.md
+      
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: /tmp/release_notes.md
+          files: |
+            target/orbit-*.jar
+            target/orbit-*.pom
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: ✅ Verify Maven Central publication
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          echo "🎊 Release completed successfully!"
+          echo "📦 Artifact: io.github.viniciu-s:orbit:$VERSION"
+          echo ""
+          echo "⏳ Synchronization timeline:"
+          echo "  • Staging → Maven Central: ~10-30 minutes"
+          echo "  • search.maven.org: ~2 hours"
+          echo ""
+          echo "🔗 Check status:"
+          echo "  • Sonatype: https://s01.oss.sonatype.org"
+          echo "  • Maven Central: https://repo1.maven.org/maven2/io/github/viniciu-s/orbit/$VERSION/"
+          echo "  • Search: https://search.maven.org/artifact/io.github.viniciu-s/orbit/$VERSION/jar"
