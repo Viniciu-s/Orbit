@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
  * event type, its declared priority, and the reflective {@link Method} handle.
  *
  * <p>Package-private — internal use by {@link AnnotationScanner} and
- * {@link com.orbit.lib.core.OrbitEventBus} only.
+ * {@link io.orbitbus.core.OrbitEventBus} only.
  */
 public record ScannedMethod(Class<? extends Event> eventType, Priority priority, Method method) {
 }

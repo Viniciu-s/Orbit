@@ -134,4 +134,10 @@ After Phase 5, output a final report:
 After Phase 5, prepare a commit message in this formats for example:
 ```feat: Implement <feature/component name> in Orbit Event Bus
 ```fix: <if this was a bug fix, otherwise omit>
-``ùpdate: <if this is an update to an existing feature, otherwise omit>
+```update: <if this is an update to an existing feature, otherwise omit>
+```
+
+---
+
+## Documentation
+Dont create documentation or examples in tasks. Focus only on the implementation of the feature/component as described in the README. Documentation and examples can be added in a separate task after the implementation is complete and validated against the README specification.

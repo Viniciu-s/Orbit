@@ -1,76 +1,60 @@
-name: CI
+name: CI - Build and Test
 
 on:
   push:
-    branches: ["main", "develop", "feature/**", "fix/**"]
+    branches:
+      - main
+      - vinicius_dev
   pull_request:
-    branches: ["main", "develop"]
-
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+    branches:
+      - main
 
 jobs:
   build:
-    name: Build & Verify (Java ${{ matrix.java }})
+    name: Build and Test (Java ${{ matrix.java }})
     runs-on: ubuntu-latest
-
+    
     strategy:
       matrix:
         java: [21]
-      fail-fast: true
-
+    
     steps:
-      - name: Checkout
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ matrix.java }}
+      
+      - name: ☕ Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: temurin
-          cache: maven
-
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
-      - name: Checkstyle
-        run: ./mvnw checkstyle:check --no-transfer-progress
-
-      - name: Compile
-        run: ./mvnw compile --no-transfer-progress
-
-      - name: Test & Coverage
-        run: ./mvnw test jacoco:report --no-transfer-progress
-
-      - name: SpotBugs
-        run: ./mvnw spotbugs:check --no-transfer-progress
-
-      - name: Package
-        run: ./mvnw package -DskipTests --no-transfer-progress
-
-      - name: Upload test results
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: 🔍 Verify Maven version
+        run: ./mvnw --version
+      
+      - name: 🧪 Run tests
+        run: ./mvnw clean verify
+      
+      - name: 📊 Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-java${{ matrix.java }}
+          name: test-results-java-${{ matrix.java }}
           path: target/surefire-reports/
-          retention-days: 7
-
-      - name: Upload coverage report
-        if: always()
+      
+      - name: 📈 Upload coverage report
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-java${{ matrix.java }}
+          name: coverage-report-java-${{ matrix.java }}
           path: target/site/jacoco/
-          retention-days: 7
-
-      - name: Publish test report (PR)
-        if: github.event_name == 'pull_request'
-        uses: dorny/test-reporter@v1
+      
+      - name: 📦 Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
-          name: JUnit Results (Java ${{ matrix.java }})
-          path: target/surefire-reports/*.xml
-          reporter: java-junit
-          fail-on-error: true
+          name: orbit-build-java-${{ matrix.java }}
+          path: |
+            target/*.jar
+            !target/*-javadoc.jar
+            !target/*-sources.jar
