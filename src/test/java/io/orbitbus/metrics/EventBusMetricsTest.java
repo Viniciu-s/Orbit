@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -84,15 +85,18 @@ class EventBusMetricsTest {
     }
 
     @Test
-    void should_countAsyncEventsPublished() throws InterruptedException {
+    void should_countAsyncEventsPublished() throws Exception {
         CountDownLatch latch = new CountDownLatch(3);
         bus.subscribeAsync(UserCreatedEvent.class, event -> latch.countDown());
 
-        bus.publishAsync(new UserCreatedEvent("Alice"));
-        bus.publishAsync(new UserCreatedEvent("Bob"));
-        bus.publishAsync(new UserCreatedEvent("Charlie"));
+        CompletableFuture<Void> future1 = bus.publishAsync(new UserCreatedEvent("Alice"));
+        CompletableFuture<Void> future2 = bus.publishAsync(new UserCreatedEvent("Bob"));
+        CompletableFuture<Void> future3 = bus.publishAsync(new UserCreatedEvent("Charlie"));
 
-        assertTrue(latch.await(1, TimeUnit.SECONDS), "Async events should complete");
+        // Wait for all async operations to complete (including afterPublish interceptors)
+        CompletableFuture.allOf(future1, future2, future3).get(1, TimeUnit.SECONDS);
+        assertTrue(latch.await(100, TimeUnit.MILLISECONDS), "Listeners should have completed");
+
         assertEquals(3, metrics.eventsPublished(UserCreatedEvent.class));
         assertEquals(3, metrics.totalEventsPublished());
     }

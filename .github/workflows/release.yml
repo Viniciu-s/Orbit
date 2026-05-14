@@ -22,7 +22,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-          server-id: ossrh
+          server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -49,8 +49,8 @@ jobs:
       - name: 🚀 Deploy to Maven Central
         run: ./mvnw deploy -P release -DskipTests
         env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       
       - name: 📝 Generate release notes
@@ -92,6 +92,6 @@ jobs:
           echo "  • search.maven.org: ~2 hours"
           echo ""
           echo "🔗 Check status:"
-          echo "  • Sonatype: https://s01.oss.sonatype.org"
+          echo "  • Sonatype: https://central.sonatype.com/publishing/deployments"
           echo "  • Maven Central: https://repo1.maven.org/maven2/io/github/viniciu-s/orbit/$VERSION/"
           echo "  • Search: https://search.maven.org/artifact/io.github.viniciu-s/orbit/$VERSION/jar"
