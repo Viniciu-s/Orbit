@@ -36,3 +36,6 @@ build/
 ### GPG ###
 private-key-new.asc
 revoke.asc
+
+## Orbit ##
+OrbitPlayground.java

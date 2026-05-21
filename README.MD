@@ -75,13 +75,13 @@ bus.subscribe(UserCreatedEvent.class, event -> {
 <dependency>
     <groupId>io.github.viniciu-s</groupId>
     <artifactId>orbit</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
 #### Gradle
 ```gradle
-implementation 'io.github.viniciu-s:orbit:1.0.0'
+implementation 'io.github.viniciu-s:orbit:1.0.1'
 ```
 
 > 📦 **Disponível no Maven Central**: [io.github.viniciu-s:orbit](https://search.maven.org/artifact/io.github.viniciu-s/orbit)
@@ -656,23 +656,14 @@ Contribuições são bem-vindas! Para contribuir:
 
 ---
 
-## 📜 Licença
-
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
----
-
 ## 📞 Suporte
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/Viniciu-s/Orbit/issues)
-- 💬 **Discussões**: [GitHub Discussions](https://github.com/Viniciu-s/Orbit/discussions)
+- 🐛 [Linkedin](https://www.linkedin.com/in/vinivieiraa/)
 - 📧 **Email**: viniciusvsoares00@gmail.com
 
 ---
 
 <div align="center">
-
-**Feito com ❤️ para a comunidade Java**
 
 [⬆ Voltar ao topo](#-orbit-event-bus)
 
